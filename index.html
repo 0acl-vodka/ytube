@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<div id="player"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+let player;
+
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('player', {
+        width: 960,
+        height: 540,
+        videoId: '86LKuj-DK04',
+        playerVars: {
+            start: 30,
+            autoplay: 1
+        },
+        events: {
+            onReady: () => player.playVideo()
+        }
+    });
+
+    setInterval(() => {
+        if (!player || !player.getCurrentTime) return;
+
+        const t = player.getCurrentTime();
+
+        if (t >= 45) {
+            player.seekTo(30, true);
+        }
+    }, 100);
+}
+</script>
+
+</body>
+</html>
