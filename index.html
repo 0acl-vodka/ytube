@@ -8,22 +8,29 @@
 body {
     font-family: sans-serif;
     margin: 20px;
+    background-color: #e8e8e8;
 }
 
 input {
-    padding: 6px;
+    padding: 8px;
     margin: 4px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
 }
 
 button {
-    padding: 6px 12px;
-    margin: 4px;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
 .video-item {
-    margin-top: 25px;
-    padding-top: 15px;
-    border-top: 1px solid #ccc;
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 
 .header {
@@ -256,6 +263,10 @@ function createPlayer(idx, videoId) {
 
 function removeLoop(idx) {
 
+    if (!confirm("정말 삭제할까?")) {
+        return;
+    }
+    
     const loop = loops[idx];
 
     if (!loop) return;
@@ -279,6 +290,10 @@ function removeLoop(idx) {
 
 function clearAll() {
 
+    if (!confirm("저장된 모든 영상을 삭제할까?")) {
+        return;
+    }
+    
     for (const loop of loops) {
 
         if (!loop) continue;
