@@ -1,38 +1,311 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>YouTube AB Loop</title>
+
+<style>
+body {
+    font-family: sans-serif;
+    margin: 20px;
+}
+
+input {
+    padding: 6px;
+    margin: 4px;
+}
+
+button {
+    padding: 6px 12px;
+    margin: 4px;
+}
+
+.video-item {
+    margin-top: 25px;
+    padding-top: 15px;
+    border-top: 1px solid #ccc;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.player {
+    width: 960px;
+    height: 540px;
+}
+</style>
+</head>
+
 <body>
 
-<div id="player"></div>
+<h2>YouTube AB Loop</h2>
+
+<input id="url" placeholder="유튜브 링크" size="50">
+<input id="start" type="number" placeholder="시작초">
+<input id="end" type="number" placeholder="종료초">
+
+<button onclick="createLoop()">생성</button>
+<button onclick="clearAll()">전체 삭제</button>
+
+<div id="videos"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-let player;
 
-function onYouTubeIframeAPIReady() {
-    player = new YT.Player('player', {
-        width: 960,
-        height: 540,
-        videoId: '86LKuj-DK04',
-        playerVars: {
-            start: 30,
-            autoplay: 1
-        },
-        events: {
-            onReady: () => player.playVideo()
-        }
-    });
+let playerIndex = 0;
+const loops = [];
 
-    setInterval(() => {
-        if (!player || !player.getCurrentTime) return;
+function extractVideoId(url) {
 
-        const t = player.getCurrentTime();
+    const patterns = [
+        /youtu\.be\/([^?&]+)/,
+        /v=([^&]+)/,
+        /embed\/([^?&]+)/
+    ];
 
-        if (t >= 45) {
-            player.seekTo(30, true);
-        }
-    }, 100);
+    for (const p of patterns) {
+        const match = url.match(p);
+        if (match) return match[1];
+    }
+
+    return null;
 }
+
+function saveLoops() {
+
+    const data = [];
+
+    for (const loop of loops) {
+
+        if (!loop) continue;
+
+        data.push({
+            videoId: loop.videoId,
+            start: loop.start,
+            end: loop.end
+        });
+    }
+
+    localStorage.setItem(
+        "ytLoops",
+        JSON.stringify(data)
+    );
+}
+
+function loadLoops() {
+
+    const saved =
+        localStorage.getItem("ytLoops");
+
+    if (!saved) return;
+
+    const data =
+        JSON.parse(saved);
+
+    for (const item of data) {
+
+        createLoopFromData(
+            item.videoId,
+            item.start,
+            item.end
+        );
+    }
+}
+
+async function createLoop() {
+
+    const url =
+        document.getElementById("url").value.trim();
+
+    const start =
+        Number(document.getElementById("start").value);
+
+    const end =
+        Number(document.getElementById("end").value);
+
+    if (!url || end <= start) {
+        alert("입력값 확인");
+        return;
+    }
+
+    const videoId = extractVideoId(url);
+
+    if (!videoId) {
+        alert("영상 ID 추출 실패");
+        return;
+    }
+
+    await createLoopFromData(
+        videoId,
+        start,
+        end
+    );
+
+    saveLoops();
+
+    document.getElementById("url").value = "";
+    document.getElementById("start").value = "";
+    document.getElementById("end").value = "";
+}
+
+async function createLoopFromData(
+    videoId,
+    start,
+    end
+) {
+
+    let title = videoId;
+
+    try {
+
+        const res = await fetch(
+            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+        );
+
+        const data = await res.json();
+        title = data.title;
+
+    } catch {}
+
+    const idx = playerIndex++;
+
+    const wrapper =
+        document.createElement("div");
+
+    wrapper.className = "video-item";
+    wrapper.id = `wrapper-${idx}`;
+
+    wrapper.innerHTML = `
+        <div class="header">
+            <span>${title} (${start}~${end}초)</span>
+            <button onclick="removeLoop(${idx})">삭제</button>
+        </div>
+
+        <div id="player-${idx}" class="player"></div>
+    `;
+
+    document
+        .getElementById("videos")
+        .appendChild(wrapper);
+
+    loops[idx] = {
+        videoId,
+        start,
+        end,
+        player: null,
+        interval: null
+    };
+
+    createPlayer(idx, videoId);
+}
+
+function createPlayer(idx, videoId) {
+
+    const loop = loops[idx];
+
+    loop.player = new YT.Player(
+        `player-${idx}`,
+        {
+            width: 960,
+            height: 540,
+
+            videoId: videoId,
+
+            playerVars: {
+                autoplay: 1,
+                start: loop.start
+            },
+
+            events: {
+
+                onReady(event) {
+
+                    event.target.playVideo();
+
+                    loop.interval =
+                        setInterval(() => {
+
+                            try {
+
+                                const current =
+                                    event.target.getCurrentTime();
+
+                                if (
+                                    current >= loop.end
+                                ) {
+
+                                    event.target.seekTo(
+                                        loop.start,
+                                        true
+                                    );
+                                }
+
+                            } catch {}
+
+                        }, 100);
+                }
+            }
+        }
+    );
+}
+
+function removeLoop(idx) {
+
+    const loop = loops[idx];
+
+    if (!loop) return;
+
+    clearInterval(loop.interval);
+
+    if (loop.player) {
+        loop.player.destroy();
+    }
+
+    document
+        .getElementById(
+            `wrapper-${idx}`
+        )
+        ?.remove();
+
+    delete loops[idx];
+
+    saveLoops();
+}
+
+function clearAll() {
+
+    for (const loop of loops) {
+
+        if (!loop) continue;
+
+        clearInterval(loop.interval);
+
+        if (loop.player) {
+            loop.player.destroy();
+        }
+    }
+
+    document.getElementById(
+        "videos"
+    ).innerHTML = "";
+
+    loops.length = 0;
+
+    localStorage.removeItem(
+        "ytLoops"
+    );
+}
+
+window.addEventListener(
+    "load",
+    loadLoops
+);
+
 </script>
 
 </body>
