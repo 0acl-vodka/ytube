@@ -5,6 +5,15 @@
 <title>YouTube AB Loop (Pro Version)</title>
 
 <style>
+
+/* 경기천년제목체 추가 */
+@font-face {
+    font-family: 'GyeonggiTitle';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2410-3@1.0/Title_Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+}
+    
 /* 🎨 기본 스타일 및 다크모드 변수 설정 */
 :root {
     --bg-color: #e8e8e8;
@@ -25,13 +34,13 @@ body.dark-mode {
 }
 
 body {
-    font-family: sans-serif;
+    font-family: 'GyeonggiTitle', sans-serif;
     margin: 20px;
     background-color: var(--bg-color);
     color: var(--text-color);
     transition: background-color 0.3s, color 0.3s;
 }
-
+//메모장 입력
 input {
     padding: 8px;
     margin: 4px;
@@ -39,6 +48,7 @@ input {
     border-radius: 6px;
     background-color: var(--box-bg);
     color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
 
 button {
