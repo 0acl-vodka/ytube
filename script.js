@@ -31,7 +31,8 @@ function extractVideoId(url) {
         /youtu\.be\/([^?&]+)/,
         /v=([^&]+)/,
         /embed\/([^?&]+)/,
-        /\/live\/([^?&]+)/ 
+        /\/live\/([^?&]+)/,
+		/\/shorts\/([^?&]+)/			
     ];
     for (const p of patterns) {
         const match = url.match(p);
@@ -52,6 +53,16 @@ async function saveLoops() {
             title: loop.title,
             memo: loop.memo || "" // 메모가 없으면 빈칸 저장
         });
+    }
+	
+	// 🔍 [추가] 데이터 용량 사전 체크 (1MB 제한)
+    const jsonString = JSON.stringify({ ytLoops: data });
+    const byteLength = new Blob([jsonString]).size; // 실제 바이트 크기 계산
+    const maxBytes = 1024 * 1024; // 1MB = 1,048,576 Bytes
+
+    if (byteLength > maxBytes) {
+        alert(`⚠️ 저장 용량(1MB)을 초과했습니다! 현재 크기: ${(byteLength / 1024).toFixed(1)}KB\n메모를 줄이거나 오래된 영상을 삭제한 후 다시 시도해 주세요. 데이터가 저장되지 않았습니다.`);
+        return; // Firestore 전송을 중단하고 함수 탈출
     }
 
     try {
