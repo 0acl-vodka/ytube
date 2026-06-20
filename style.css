@@ -2,7 +2,7 @@
 /* 경기천년제목체 추가 */
 @font-face {
     font-family: 'GyeonggiTitle';
-    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/GyeonggiTitleL.woff') format('woff');
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2410-3@1.0/Title_Light.woff') format('woff');
     font-weight: 300; /* Light */
     font-style: normal;
 }
@@ -14,7 +14,7 @@
 }
 @font-face {
     font-family: 'GyeonggiTitle';
-    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/GyeonggiTitleB.woff') format('woff');
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2410-3@1.0/Title_Bold.woff') format('woff');
     font-weight: 700; /* Bold */
     font-style: normal;
 }
@@ -41,7 +41,7 @@ body.dark-mode {
 
 body {
     font-family: 'GyeonggiTitle', sans-serif;
-    font-weight: 600;
+    font-weight: 500;
     margin: 20px;
     background-color: var(--bg-color);
     color: var(--text-color);
@@ -128,7 +128,7 @@ button:hover {
 
 .memo-container textarea {
     font-family: inherit; /* 🟢 추가: 폰트를 강제로 상속받게 함 */
-    font-weight: inherit;
+    font-weight: 300;
     flex-grow: 1;
     padding: 12px;
     border-radius: 6px;
