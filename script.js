@@ -183,6 +183,7 @@ async function createLoopFromData(videoId, start, end, savedTitle = null, memo =
 
 function createPlayer(idx, videoId) {
     const loop = loops[idx];
+    let lastSeekTime = 0; // ⏱️ 최근에 화면을 강제로 이동(Seek)시킨 시간을 기록
 
     loop.player = new YT.Player(`player-${idx}`, {
         videoId: videoId,
@@ -195,13 +196,17 @@ function createPlayer(idx, videoId) {
                 event.target.playVideo();
                 loop.interval = setInterval(() => {
                     try {
-                        // 1. 플레이어가 실제로 '재생 중(1)'일 때만 시간 체크를 진행합니다.
-                        // (버퍼링이나 뒤로 이동 중일 때 무한 seekTo 호출을 막아줌)
                         if (event.target.getPlayerState() === 1) { 
                             const current = event.target.getCurrentTime();
+                            const now = Date.now();
                             
-                            // 2. 종료 시간을 넘었거나, 사용자가 수동으로 조작해 시작 시간보다 '한참 전(0.5초 이상)'으로 갔을 때만 이동
+                            // ⏱️ [안전장치] 이미 이동 명령을 내린 지 0.8초(800ms)가 안 지났다면
+                            // 유튜브 플레이어가 안정화될 때까지 다음 검사를 하지 않고 무조건 대기합니다.
+                            if (now - lastSeekTime < 800) return; 
+
+                            // 구간 반복 조건 체크
                             if (current >= loop.end || current < loop.start - 0.5) {
+                                lastSeekTime = now; // 이동하는 순간의 타임스탬프를 기록 (쿨다운 가동)
                                 event.target.seekTo(loop.start, true);
                             }
                         }
