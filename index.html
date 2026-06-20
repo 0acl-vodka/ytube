@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>YouTube AB Loop</title>
+<title>YouTube AB Loop (Firebase Version)</title>
 
 <style>
 body {
@@ -51,7 +51,7 @@ button {
 
 <body>
 
-<h2>YouTube AB Loop</h2>
+<h2>YouTube AB Loop (Firebase 연동)</h2>
 
 <input id="url" placeholder="유튜브 링크" size="50">
 <input id="start" type="number" placeholder="시작초">
@@ -64,13 +64,33 @@ button {
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
 <script>
+// 🚨 여기에 Firebase 설정 값을 넣으세요!
+const firebaseConfig = {
+  apiKey: "AIzaSyD7va4fNbe_T4dyEDVmxg-IW_ccvrM1Zvw",
+  authDomain: "ytubeclp.firebaseapp.com",
+  projectId: "ytubeclp",
+  storageBucket: "ytubeclp.firebasestorage.app",
+  messagingSenderId: "81831868656",
+  appId: "1:81831868656:web:6226c1e878b4483da2ea35",
+  measurementId: "G-QYGLD5Q5RH"
+};
+
+// Firebase 초기화
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// 데이터를 저장할 문서의 위치 (컬렉션: myApp, 문서: loopData)
+const docRef = db.collection("myApp").doc("loopData");
+
 
 let playerIndex = 0;
 const loops = [];
 
 function extractVideoId(url) {
-
     const patterns = [
         /youtu\.be\/([^?&]+)/,
         /v=([^&]+)/,
@@ -81,18 +101,15 @@ function extractVideoId(url) {
         const match = url.match(p);
         if (match) return match[1];
     }
-
     return null;
 }
 
-function saveLoops() {
-
+// 🟢 수정됨: Firestore에 데이터 저장하기
+async function saveLoops() {
     const data = [];
 
     for (const loop of loops) {
-
         if (!loop) continue;
-
         data.push({
             videoId: loop.videoId,
             start: loop.start,
@@ -100,42 +117,44 @@ function saveLoops() {
         });
     }
 
-    localStorage.setItem(
-        "ytLoops",
-        JSON.stringify(data)
-    );
+    try {
+        await docRef.set({ ytLoops: data });
+        console.log("Firebase에 저장 완료!");
+    } catch (error) {
+        console.error("저장 실패:", error);
+        alert("데이터 저장에 실패했습니다.");
+    }
 }
 
-function loadLoops() {
+// 🟢 수정됨: Firestore에서 데이터 불러오기
+async function loadLoops() {
+    try {
+        const docSnap = await docRef.get();
+        
+        if (!docSnap.exists) {
+            console.log("저장된 데이터가 없습니다.");
+            return;
+        }
 
-    const saved =
-        localStorage.getItem("ytLoops");
+        const data = docSnap.data().ytLoops || [];
 
-    if (!saved) return;
-
-    const data =
-        JSON.parse(saved);
-
-    for (const item of data) {
-
-        createLoopFromData(
-            item.videoId,
-            item.start,
-            item.end
-        );
+        for (const item of data) {
+            // 불러올 때 비동기로 화면에 그려줌
+            await createLoopFromData(
+                item.videoId,
+                item.start,
+                item.end
+            );
+        }
+    } catch (error) {
+        console.error("불러오기 실패:", error);
     }
 }
 
 async function createLoop() {
-
-    const url =
-        document.getElementById("url").value.trim();
-
-    const start =
-        Number(document.getElementById("start").value);
-
-    const end =
-        Number(document.getElementById("end").value);
+    const url = document.getElementById("url").value.trim();
+    const start = Number(document.getElementById("start").value);
+    const end = Number(document.getElementById("end").value);
 
     if (!url || end <= start) {
         alert("입력값 확인");
@@ -149,12 +168,9 @@ async function createLoop() {
         return;
     }
 
-    await createLoopFromData(
-        videoId,
-        start,
-        end
-    );
-
+    await createLoopFromData(videoId, start, end);
+    
+    // 🟢 수정됨: Firestore에 저장
     saveLoops();
 
     document.getElementById("url").value = "";
@@ -162,29 +178,19 @@ async function createLoop() {
     document.getElementById("end").value = "";
 }
 
-async function createLoopFromData(
-    videoId,
-    start,
-    end
-) {
-
+async function createLoopFromData(videoId, start, end) {
     let title = videoId;
 
     try {
-
         const res = await fetch(
             `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
         );
-
         const data = await res.json();
         title = data.title;
-
     } catch {}
 
     const idx = playerIndex++;
-
-    const wrapper =
-        document.createElement("div");
+    const wrapper = document.createElement("div");
 
     wrapper.className = "video-item";
     wrapper.id = `wrapper-${idx}`;
@@ -194,13 +200,10 @@ async function createLoopFromData(
             <span>${title} (${start}~${end}초)</span>
             <button onclick="removeLoop(${idx})">삭제</button>
         </div>
-
         <div id="player-${idx}" class="player"></div>
     `;
 
-    document
-        .getElementById("videos")
-        .appendChild(wrapper);
+    document.getElementById("videos").appendChild(wrapper);
 
     loops[idx] = {
         videoId,
@@ -214,63 +217,39 @@ async function createLoopFromData(
 }
 
 function createPlayer(idx, videoId) {
-
     const loop = loops[idx];
 
-    loop.player = new YT.Player(
-        `player-${idx}`,
-        {
-            width: 960,
-            height: 540,
+    loop.player = new YT.Player(`player-${idx}`, {
+        width: 960,
+        height: 540,
+        videoId: videoId,
+        playerVars: {
+            autoplay: 1,
+            start: loop.start
+        },
+        events: {
+            onReady(event) {
+                event.target.playVideo();
 
-            videoId: videoId,
-
-            playerVars: {
-                autoplay: 1,
-                start: loop.start
-            },
-
-            events: {
-
-                onReady(event) {
-
-                    event.target.playVideo();
-
-                    loop.interval =
-                        setInterval(() => {
-
-                            try {
-
-                                const current =
-                                    event.target.getCurrentTime();
-
-                                if (
-                                    current >= loop.end
-                                ) {
-
-                                    event.target.seekTo(
-                                        loop.start,
-                                        true
-                                    );
-                                }
-
-                            } catch {}
-
-                        }, 100);
-                }
+                loop.interval = setInterval(() => {
+                    try {
+                        const current = event.target.getCurrentTime();
+                        if (current >= loop.end) {
+                            event.target.seekTo(loop.start, true);
+                        }
+                    } catch {}
+                }, 100);
             }
         }
-    );
+    });
 }
 
 function removeLoop(idx) {
-
     if (!confirm("정말 삭제할까?")) {
         return;
     }
     
     const loop = loops[idx];
-
     if (!loop) return;
 
     clearInterval(loop.interval);
@@ -279,49 +258,38 @@ function removeLoop(idx) {
         loop.player.destroy();
     }
 
-    document
-        .getElementById(
-            `wrapper-${idx}`
-        )
-        ?.remove();
+    document.getElementById(`wrapper-${idx}`)?.remove();
 
     delete loops[idx];
 
+    // 🟢 수정됨: Firestore에 변경사항 저장
     saveLoops();
 }
 
 function clearAll() {
-
     if (!confirm("저장된 모든 영상을 삭제할까?")) {
         return;
     }
     
     for (const loop of loops) {
-
         if (!loop) continue;
-
         clearInterval(loop.interval);
-
         if (loop.player) {
             loop.player.destroy();
         }
     }
 
-    document.getElementById(
-        "videos"
-    ).innerHTML = "";
-
+    document.getElementById("videos").innerHTML = "";
     loops.length = 0;
 
-    localStorage.removeItem(
-        "ytLoops"
-    );
+    // 🟢 수정됨: Firestore 문서 완전히 비우기
+    saveLoops();
 }
 
-window.addEventListener(
-    "load",
-    loadLoops
-);
+// 🟢 수정됨: 비동기 로딩을 위해 이벤트 리스너 변경
+window.addEventListener("load", async () => {
+    await loadLoops();
+});
 
 </script>
 
