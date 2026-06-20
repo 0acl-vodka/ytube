@@ -195,10 +195,15 @@ function createPlayer(idx, videoId) {
                 event.target.playVideo();
                 loop.interval = setInterval(() => {
                     try {
-                        const current = event.target.getCurrentTime();
-                        // 🟢 수정된 시간을 바로 반영하기 위해 loop.end를 참조
-                        if (current >= loop.end || current < loop.start) {
-                            event.target.seekTo(loop.start, true);
+                        // 1. 플레이어가 실제로 '재생 중(1)'일 때만 시간 체크를 진행합니다.
+                        // (버퍼링이나 뒤로 이동 중일 때 무한 seekTo 호출을 막아줌)
+                        if (event.target.getPlayerState() === 1) { 
+                            const current = event.target.getCurrentTime();
+                            
+                            // 2. 종료 시간을 넘었거나, 사용자가 수동으로 조작해 시작 시간보다 '한참 전(0.5초 이상)'으로 갔을 때만 이동
+                            if (current >= loop.end || current < loop.start - 0.5) {
+                                event.target.seekTo(loop.start, true);
+                            }
                         }
                     } catch {}
                 }, 100);
