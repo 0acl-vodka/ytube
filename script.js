@@ -41,19 +41,41 @@ function extractVideoId(url) {
     return null;
 }
 
-// 🟢 저장 시 메모(memo) 필드 추가
+// 🟢 저장 시 메모(memo) 필드 추가 및 1MB 용량 사전 체크 (배치 순서 보존)
 async function saveLoops() {
     const data = [];
-    for (const loop of loops) {
+    
+    // 화면에 배치된 DOM 순서대로 데이터를 모아서 저장 (복제 시 위치 유지)
+    const videoNodes = document.getElementById("videos").children;
+    for (let i = 0; i < videoNodes.length; i++) {
+        const idx = videoNodes[i].id.split('-')[1]; // wrapper-1 에서 '1' 추출
+        const loop = loops[idx];
         if (!loop) continue;
+        
         data.push({
             videoId: loop.videoId,
             start: loop.start,
             end: loop.end,
             title: loop.title,
-            memo: loop.memo || "" // 메모가 없으면 빈칸 저장
+            memo: loop.memo || ""
         });
     }
+
+    const jsonString = JSON.stringify({ ytLoops: data });
+    const byteLength = new Blob([jsonString]).size; 
+    const maxBytes = 1024 * 1024; 
+
+    if (byteLength > maxBytes) {
+        alert(`⚠️ 저장 용량(1MB)을 초과했습니다! 현재 크기: ${(byteLength / 1024).toFixed(1)}KB\n메모를 줄이거나 오래된 영상을 삭제한 후 다시 시도해 주세요. 데이터가 저장되지 않았습니다.`);
+        return; 
+    }
+
+    try {
+        await docRef.set({ ytLoops: data });
+    } catch (error) {
+        console.error("저장 실패:", error);
+    }
+}
 	
 	// 🔍 [추가] 데이터 용량 사전 체크 (1MB 제한)
     const jsonString = JSON.stringify({ ytLoops: data });
@@ -117,8 +139,8 @@ async function createLoop() {
     document.getElementById("end").value = "";
 }
 
-// 🟢 생성 함수에 메모(memo) 매개변수 및 UI 레이아웃 추가
-async function createLoopFromData(videoId, start, end, savedTitle = null, memo = "") {
+// 🟢 생성 함수에 복제 버튼, 삽입 위치(insertAfterNode) 매개변수 추가
+async function createLoopFromData(videoId, start, end, savedTitle = null, memo = "", insertAfterNode = null) {
     let title = savedTitle || videoId;
 
     if (!savedTitle) {
@@ -134,11 +156,12 @@ async function createLoopFromData(videoId, start, end, savedTitle = null, memo =
     wrapper.className = "video-item";
     wrapper.id = `wrapper-${idx}`;
 
-    // 🟢 HTML 구조 변경 (수정 버튼 추가, 메모장 추가)
+    // 🟢 HTML 구조 변경 (복제 버튼 추가)
     wrapper.innerHTML = `
         <div class="header">
             <span id="title-${idx}"><b>${title}</b> (${start}~${end}초)</span>
             <div class="header-buttons">
+                <button onclick="duplicateLoop(${idx})">복제</button>
                 <button onclick="editLoop(${idx})">시간 수정</button>
                 <button onclick="removeLoop(${idx})">삭제</button>
             </div>
@@ -154,7 +177,13 @@ async function createLoopFromData(videoId, start, end, savedTitle = null, memo =
         </div>
     `;
 
-    document.getElementById("videos").appendChild(wrapper);
+    // 🟢 지정된 위치(insertAfterNode) 바로 밑에 삽입, 없으면 맨 끝에 추가
+    const videosContainer = document.getElementById("videos");
+    if (insertAfterNode) {
+        videosContainer.insertBefore(wrapper, insertAfterNode.nextSibling);
+    } else {
+        videosContainer.appendChild(wrapper);
+    }
 
     loops[idx] = {
         videoId,
@@ -238,6 +267,28 @@ function updateMemo(idx) {
     const memoText = document.getElementById(`memo-${idx}`).value;
     loop.memo = memoText;
     
+    saveLoops();
+}
+
+// 🟢 새로운 기능: 영상 및 메모 복제 (바로 밑에 생성)
+async function duplicateLoop(idx) {
+    const loop = loops[idx];
+    if (!loop) return;
+
+    // 현재 클릭한 영상의 DOM 요소를 찾아서 기준점으로 삼음
+    const currentNode = document.getElementById(`wrapper-${idx}`);
+    
+    // 원본 데이터를 그대로 넘겨서 새로운 루프 생성
+    await createLoopFromData(
+        loop.videoId,
+        loop.start,
+        loop.end,
+        loop.title,
+        loop.memo, // 메모 내용도 그대로 복제
+        currentNode // 이 노드 밑에 추가하라고 넘겨줌
+    );
+
+    // 복제된 순서를 DB에 바로 저장
     saveLoops();
 }
 

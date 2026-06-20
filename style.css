@@ -147,6 +147,6 @@ button:hover {
         flex-direction: column;
     }
     .memo-container textarea {
-        min-height: 150px;
+        min-height: 100px;
     }
 }
