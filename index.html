@@ -2,27 +2,57 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>YouTube AB Loop (Firebase Version)</title>
+<title>YouTube AB Loop (Pro Version)</title>
 
 <style>
+/* 🎨 기본 스타일 및 다크모드 변수 설정 */
+:root {
+    --bg-color: #e8e8e8;
+    --text-color: #000;
+    --box-bg: white;
+    --border-color: #ccc;
+    --btn-bg: #f0f0f0;
+    --btn-hover: #e0e0e0;
+}
+
+body.dark-mode {
+    --bg-color: #1e1e1e;
+    --text-color: #f5f5f5;
+    --box-bg: #2c2c2c;
+    --border-color: #444;
+    --btn-bg: #444;
+    --btn-hover: #555;
+}
+
 body {
     font-family: sans-serif;
     margin: 20px;
-    background-color: #e8e8e8;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
 }
 
 input {
     padding: 8px;
     margin: 4px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
+    background-color: var(--box-bg);
+    color: var(--text-color);
 }
 
 button {
     padding: 8px 14px;
-    border: none;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     cursor: pointer;
+    background-color: var(--btn-bg);
+    color: var(--text-color);
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: var(--btn-hover);
 }
 
 .video-item {
@@ -30,37 +60,81 @@ button {
     padding: 15px;
     width: min(1200px, 90vw);
     margin: 20px auto;
-    background: white;
+    background: var(--box-bg);
     border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    transition: background-color 0.3s;
 }
 
 .header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* 📝 영상과 메모를 나란히 배치하기 위한 레이아웃 */
+.video-body {
+    display: flex;
+    gap: 15px;
+    flex-direction: row;
+}
+
+.player-container {
+    flex: 6.5; /* 영상 비율 */
 }
 
 .player {
     width: 100%;
     aspect-ratio: 16 / 9;
 }
+
+.memo-container {
+    flex: 3.5; /* 메모장 비율 */
+    display: flex;
+    flex-direction: column;
+}
+
+.memo-container textarea {
+    flex-grow: 1;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--box-bg);
+    color: var(--text-color);
+    resize: none;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+/* 📱 모바일 화면에서는 메모장이 영상 아래로 내려가도록 처리 */
+@media (max-width: 768px) {
+    .video-body {
+        flex-direction: column;
+    }
+    .memo-container textarea {
+        min-height: 150px;
+    }
+}
 </style>
 </head>
 
 <body>
 
-<h2>YouTube AB Loop (Firebase 연동)</h2>
+<h2>YouTube AB Loop (Pro)</h2>
 
 <input id="url" placeholder="유튜브 링크" size="50">
-<input id="start" type="number" placeholder="시작초">
-<input id="end" type="number" placeholder="종료초">
+<input id="start" type="number" placeholder="시작초" style="width: 70px;">
+<input id="end" type="number" placeholder="종료초" style="width: 70px;">
 
 <button onclick="createLoop()">생성</button>
 <button onclick="clearAll()">전체 삭제</button>
-
-<div id="videos"></div>
+<button id="themeBtn" onclick="toggleDarkMode()">다크모드 🌙</button> <div id="videos"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
@@ -78,26 +152,30 @@ button {
     appId: "1:81831868656:web:6226c1e878b4483da2ea35",
     measurementId: "G-QYGLD5Q5RH"
   };
-    
-// Firebase 초기화
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-
-// 데이터를 저장할 문서의 위치 (컬렉션: myApp, 문서: loopData)
 const docRef = db.collection("myApp").doc("loopData");
-
 
 let playerIndex = 0;
 const loops = [];
 
+// 🌙 다크모드 토글 로직
+let isDarkMode = false;
+function toggleDarkMode() {
+    isDarkMode = !isDarkMode;
+    document.body.classList.toggle("dark-mode", isDarkMode);
+    document.getElementById("themeBtn").innerText = isDarkMode ? "라이트모드 ☀️" : "다크모드 🌙";
+}
+
+// 🟢 정규식 수정됨 (라이브 주소 지원)
 function extractVideoId(url) {
     const patterns = [
         /youtu\.be\/([^?&]+)/,
         /v=([^&]+)/,
-        /embed\/([^?&]+)/
-        /\/live\/([^?&]+)/
+        /embed\/([^?&]+)/,
+        /\/live\/([^?&]+)/ 
     ];
-
     for (const p of patterns) {
         const match = url.match(p);
         if (match) return match[1];
@@ -105,46 +183,41 @@ function extractVideoId(url) {
     return null;
 }
 
-// 🟢 수정됨: Firestore에 데이터 저장하기
+// 🟢 저장 시 메모(memo) 필드 추가
 async function saveLoops() {
     const data = [];
-
     for (const loop of loops) {
         if (!loop) continue;
         data.push({
             videoId: loop.videoId,
             start: loop.start,
-            end: loop.end
+            end: loop.end,
+            title: loop.title,
+            memo: loop.memo || "" // 메모가 없으면 빈칸 저장
         });
     }
 
     try {
         await docRef.set({ ytLoops: data });
-        console.log("Firebase에 저장 완료!");
     } catch (error) {
         console.error("저장 실패:", error);
-        alert("데이터 저장에 실패했습니다.");
     }
 }
 
-// 🟢 수정됨: Firestore에서 데이터 불러오기
+// 🟢 불러올 때 메모(memo) 데이터도 함께 전달
 async function loadLoops() {
     try {
         const docSnap = await docRef.get();
-        
-        if (!docSnap.exists) {
-            console.log("저장된 데이터가 없습니다.");
-            return;
-        }
+        if (!docSnap.exists) return;
 
         const data = docSnap.data().ytLoops || [];
-
         for (const item of data) {
-            // 불러올 때 비동기로 화면에 그려줌
             await createLoopFromData(
                 item.videoId,
                 item.start,
-                item.end
+                item.end,
+                item.title,
+                item.memo
             );
         }
     } catch (error) {
@@ -158,20 +231,17 @@ async function createLoop() {
     const end = Number(document.getElementById("end").value);
 
     if (!url || end <= start) {
-        alert("입력값 확인");
+        alert("입력값 확인 (종료초가 시작초보다 커야 합니다)");
         return;
     }
 
     const videoId = extractVideoId(url);
-
     if (!videoId) {
         alert("영상 ID 추출 실패");
         return;
     }
 
     await createLoopFromData(videoId, start, end);
-    
-    // 🟢 수정됨: Firestore에 저장
     saveLoops();
 
     document.getElementById("url").value = "";
@@ -179,29 +249,41 @@ async function createLoop() {
     document.getElementById("end").value = "";
 }
 
-async function createLoopFromData(videoId, start, end) {
-    let title = videoId;
+// 🟢 생성 함수에 메모(memo) 매개변수 및 UI 레이아웃 추가
+async function createLoopFromData(videoId, start, end, savedTitle = null, memo = "") {
+    let title = savedTitle || videoId;
 
-    try {
-        const res = await fetch(
-            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
-        );
-        const data = await res.json();
-        title = data.title;
-    } catch {}
+    if (!savedTitle) {
+        try {
+            const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+            const data = await res.json();
+            title = data.title;
+        } catch {}
+    }
 
     const idx = playerIndex++;
     const wrapper = document.createElement("div");
-
     wrapper.className = "video-item";
     wrapper.id = `wrapper-${idx}`;
 
+    // 🟢 HTML 구조 변경 (수정 버튼 추가, 메모장 추가)
     wrapper.innerHTML = `
         <div class="header">
-            <span>${title} (${start}~${end}초)</span>
-            <button onclick="removeLoop(${idx})">삭제</button>
+            <span id="title-${idx}"><b>${title}</b> (${start}~${end}초)</span>
+            <div class="header-buttons">
+                <button onclick="editLoop(${idx})">시간 수정</button>
+                <button onclick="removeLoop(${idx})">삭제</button>
+            </div>
         </div>
-        <div id="player-${idx}" class="player"></div>
+
+        <div class="video-body">
+            <div class="player-container">
+                <div id="player-${idx}" class="player"></div>
+            </div>
+            <div class="memo-container">
+                <textarea id="memo-${idx}" placeholder="여기에 메모를 작성하세요... (작성 후 다른 곳을 클릭하면 자동 저장됩니다)" onchange="updateMemo(${idx})">${memo}</textarea>
+            </div>
+        </div>
     `;
 
     document.getElementById("videos").appendChild(wrapper);
@@ -210,6 +292,8 @@ async function createLoopFromData(videoId, start, end) {
         videoId,
         start,
         end,
+        title,
+        memo,
         player: null,
         interval: null
     };
@@ -221,8 +305,6 @@ function createPlayer(idx, videoId) {
     const loop = loops[idx];
 
     loop.player = new YT.Player(`player-${idx}`, {
-        width: 960,
-        height: 540,
         videoId: videoId,
         playerVars: {
             autoplay: 1,
@@ -231,11 +313,11 @@ function createPlayer(idx, videoId) {
         events: {
             onReady(event) {
                 event.target.playVideo();
-
                 loop.interval = setInterval(() => {
                     try {
                         const current = event.target.getCurrentTime();
-                        if (current >= loop.end) {
+                        // 🟢 수정된 시간을 바로 반영하기 위해 loop.end를 참조
+                        if (current >= loop.end || current < loop.start) {
                             event.target.seekTo(loop.start, true);
                         }
                     } catch {}
@@ -245,53 +327,85 @@ function createPlayer(idx, videoId) {
     });
 }
 
-function removeLoop(idx) {
-    if (!confirm("정말 삭제할까?")) {
+// 🟢 새로운 기능: 시간 수정
+function editLoop(idx) {
+    const loop = loops[idx];
+    if (!loop) return;
+
+    const newStart = prompt("새로운 시작 시간(초)을 입력하세요:", loop.start);
+    if (newStart === null) return; // 취소 누름
+    
+    const newEnd = prompt("새로운 종료 시간(초)을 입력하세요:", loop.end);
+    if (newEnd === null) return; // 취소 누름
+
+    const startNum = Number(newStart);
+    const endNum = Number(newEnd);
+
+    if (isNaN(startNum) || isNaN(endNum) || startNum >= endNum) {
+        alert("올바른 숫자를 입력해주세요 (시작초 < 종료초).");
         return;
     }
+
+    // 데이터 업데이트
+    loop.start = startNum;
+    loop.end = endNum;
+
+    // 화면 텍스트 업데이트
+    document.getElementById(`title-${idx}`).innerHTML = `<b>${loop.title}</b> (${loop.start}~${loop.end}초)`;
+
+    // 영상 재생 위치 즉시 이동
+    if (loop.player && loop.player.seekTo) {
+        loop.player.seekTo(loop.start, true);
+    }
+
+    // DB 저장
+    saveLoops();
+}
+
+// 🟢 새로운 기능: 메모 내용 저장 (입력칸을 벗어날 때 실행됨)
+function updateMemo(idx) {
+    const loop = loops[idx];
+    if (!loop) return;
+    
+    const memoText = document.getElementById(`memo-${idx}`).value;
+    loop.memo = memoText;
+    
+    saveLoops();
+}
+
+function removeLoop(idx) {
+    if (!confirm("정말 삭제할까?")) return;
     
     const loop = loops[idx];
     if (!loop) return;
 
     clearInterval(loop.interval);
-
-    if (loop.player) {
-        loop.player.destroy();
-    }
+    if (loop.player) loop.player.destroy();
 
     document.getElementById(`wrapper-${idx}`)?.remove();
-
     delete loops[idx];
 
-    // 🟢 수정됨: Firestore에 변경사항 저장
     saveLoops();
 }
 
 function clearAll() {
-    if (!confirm("저장된 모든 영상을 삭제할까?")) {
-        return;
-    }
+    if (!confirm("저장된 모든 영상을 삭제할까?")) return;
     
     for (const loop of loops) {
         if (!loop) continue;
         clearInterval(loop.interval);
-        if (loop.player) {
-            loop.player.destroy();
-        }
+        if (loop.player) loop.player.destroy();
     }
 
     document.getElementById("videos").innerHTML = "";
     loops.length = 0;
 
-    // 🟢 수정됨: Firestore 문서 완전히 비우기
     saveLoops();
 }
 
-// 🟢 수정됨: 비동기 로딩을 위해 이벤트 리스너 변경
 window.addEventListener("load", async () => {
     await loadLoops();
 });
-
 </script>
 
 </body>
