@@ -1,0 +1,152 @@
+
+/* 경기천년제목체 추가 */
+@font-face {
+    font-family: 'GyeonggiTitle';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/GyeonggiTitleL.woff') format('woff');
+    font-weight: 300; /* Light */
+    font-style: normal;
+}
+@font-face {
+    font-family: 'GyeonggiTitle';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2410-3@1.0/Title_Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'GyeonggiTitle';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/GyeonggiTitleB.woff') format('woff');
+    font-weight: 700; /* Bold */
+    font-style: normal;
+}
+
+    
+/* 🎨 기본 스타일 및 다크모드 변수 설정 */
+:root {
+    --bg-color: #e8e8e8;
+    --text-color: #000;
+    --box-bg: white;
+    --border-color: #ccc;
+    --btn-bg: #f0f0f0;
+    --btn-hover: #e0e0e0;
+}
+
+body.dark-mode {
+    --bg-color: #1e1e1e;
+    --text-color: #f5f5f5;
+    --box-bg: #2c2c2c;
+    --border-color: #444;
+    --btn-bg: #444;
+    --btn-hover: #555;
+}
+
+body {
+    font-family: 'GyeonggiTitle', sans-serif;
+    font-weight: 600;
+    margin: 20px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+h2, b, strong {
+    font-weight: 700;
+}
+    
+/* 메모장 입력 */
+input {
+    font-family: inherit; /* 🟢 추가: 폰트를 강제로 상속받게 함 */
+    font-weight: inherit;     
+    padding: 8px;
+    margin: 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--box-bg);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+button {
+    font-family: inherit; /* 🟢 추가: 폰트를 강제로 상속받게 함 */
+    font-weight: inherit;     
+    padding: 8px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    background-color: var(--btn-bg);
+    color: var(--text-color);
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: var(--btn-hover);
+}
+
+.video-item {
+    margin-top: 20px;
+    padding: 15px;
+    width: min(1200px, 90vw);
+    margin: 20px auto;
+    background: var(--box-bg);
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    transition: background-color 0.3s;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* 📝 영상과 메모를 나란히 배치하기 위한 레이아웃 */
+.video-body {
+    display: flex;
+    gap: 15px;
+    flex-direction: row;
+}
+
+.player-container {
+    flex: 6.5; /* 영상 비율 */
+}
+
+.player {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+}
+
+.memo-container {
+    flex: 3.5; /* 메모장 비율 */
+    display: flex;
+    flex-direction: column;
+}
+
+.memo-container textarea {
+    font-family: inherit; /* 🟢 추가: 폰트를 강제로 상속받게 함 */
+    font-weight: inherit;
+    flex-grow: 1;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--box-bg);
+    color: var(--text-color);
+    resize: none;
+    font-family: inherit;
+    line-height: 1.5;
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+/* 📱 모바일 화면에서는 메모장이 영상 아래로 내려가도록 처리 */
+@media (max-width: 768px) {
+    .video-body {
+        flex-direction: column;
+    }
+    .memo-container textarea {
+        min-height: 150px;
+    }
+}
