@@ -13,6 +13,13 @@
     font-weight: 500;
     font-style: normal;
 }
+@font-face {
+    font-family: 'GyeonggiTitle';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/GyeonggiTitleB.woff') format('woff');
+    font-weight: 700; /* Bold */
+    font-style: normal;
+}
+
     
 /* 🎨 기본 스타일 및 다크모드 변수 설정 */
 :root {
@@ -35,13 +42,21 @@ body.dark-mode {
 
 body {
     font-family: 'GyeonggiTitle', sans-serif;
+    font-weight: 500; /* 🟢 추가: 전체 기본 굵기를 Medium으로 지정 */
     margin: 20px;
     background-color: var(--bg-color);
     color: var(--text-color);
     transition: background-color 0.3s, color 0.3s;
 }
+
+h2, b, strong {
+    font-weight: 700;
+}
+    
 //메모장 입력
 input {
+    font-family: inherit; /* 🟢 추가: 폰트를 강제로 상속받게 함 */
+    font-weight: 500;     /* 🟢 추가: 입력칸은 Medium */
     padding: 8px;
     margin: 4px;
     border: 1px solid var(--border-color);
@@ -52,6 +67,8 @@ input {
 }
 
 button {
+    font-family: inherit; /* 🟢 추가: 폰트를 강제로 상속받게 함 */
+    font-weight: 500;     /* 🟢 추가: 입력칸은 Medium */
     padding: 8px 14px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
@@ -111,6 +128,8 @@ button:hover {
 }
 
 .memo-container textarea {
+    font-family: inherit; /* 🟢 추가: 폰트를 강제로 상속받게 함 */
+    font-weight: 500;     /* 🟢 추가: 입력칸은 Medium */
     flex-grow: 1;
     padding: 12px;
     border-radius: 6px;
