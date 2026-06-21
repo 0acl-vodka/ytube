@@ -24,7 +24,7 @@ function toggleDarkMode() {
     document.getElementById("themeBtn").innerText = isDarkMode ? "라이트모드 ☀️" : "다크모드 🌙";
 }
 
-/* 🟢 정규식 수정됨 (라이브 주소 지원 및 백슬래시 오차 수정) */
+/* 🟢 정규식 수정됨 (라이브 및 쇼츠 주소 지원) */
 function extractVideoId(url) {
     const patterns = [
         /youtu\.be\/([^?&]+)/,
@@ -181,10 +181,11 @@ async function createLoopFromData(videoId, start, end, savedTitle = null, memo =
     createPlayer(idx, videoId, shouldAutoplay); /* 🟢 판단 유무를 플레이어 생성기로 전달 */
 }
 
-/* 🟢 자동재생 제어 및 완벽한 무한 루프 렉 방지 로직 결합 */
+/* 🟢 플레이어 생성 (자동재생 제어, 포커스 렉 방지 쿨다운, 글로벌 볼륨 동기화 결합) */
 function createPlayer(idx, videoId, shouldAutoplay = false) {
     const loop = loops[idx];
     let lastSeekTime = 0; /* ⏱️ 구간 반복 팅김(10초 렉) 방지용 타임스탬프 */
+    let lastPlayerVolume = -1; /* 🔊 해당 플레이어의 직전 볼륨 상태 기록용 */
 
     loop.player = new YT.Player(`player-${idx}`, {
         videoId: videoId,
@@ -194,12 +195,36 @@ function createPlayer(idx, videoId, shouldAutoplay = false) {
         },
         events: {
             onReady(event) {
+                /* 💾 이전에 저장된 글로벌 볼륨 크기가 있다면 가져와서 적용 */
+                const savedVolume = localStorage.getItem("globalYtVolume");
+                if (savedVolume !== null) {
+                    event.target.setVolume(Number(savedVolume));
+                }
+                
+                /* 최초 볼륨 상태 기록 */
+                lastPlayerVolume = event.target.getVolume();
+
                 if (shouldAutoplay) {
                     event.target.playVideo(); /* 👈 사용자가 방금 요청한 것만 재생 명령 실행 */
                 }
                 
                 loop.interval = setInterval(() => {
                     try {
+                        /* 🔊 실시간 볼륨 변경 감지 시스템 */
+                        const currentVolume = event.target.getVolume();
+                        if (currentVolume !== lastPlayerVolume) {
+                            lastPlayerVolume = currentVolume;
+                            localStorage.setItem("globalYtVolume", currentVolume);
+                            
+                            /* 🔄 현재 조절한 볼륨을 생성되어 있는 다른 모든 플레이어에게도 전파 */
+                            loops.forEach((l, i) => {
+                                if (l && l.player && typeof l.player.setVolume === "function" && i !== idx) {
+                                    l.player.setVolume(currentVolume);
+                                }
+                            });
+                        }
+
+                        /* 🔄 구간 반복 감시: '재생 중(1)' 상태가 되었을 때만 감시 작동 */
                         if (event.target.getPlayerState() === 1) { 
                             const current = event.target.getCurrentTime();
                             const now = Date.now();
