@@ -1,5 +1,5 @@
-// 🚨 여기에 Firebase 설정 값을 넣으세요!
-  const firebaseConfig = {
+/* 🚨 여기에 Firebase 설정 값을 넣으세요! */
+const firebaseConfig = {
     apiKey: "AIzaSyD7va4fNbe_T4dyEDVmxg-IW_ccvrM1Zvw",
     authDomain: "ytubeclp.firebaseapp.com",
     projectId: "ytubeclp",
@@ -7,7 +7,7 @@
     messagingSenderId: "81831868656",
     appId: "1:81831868656:web:6226c1e878b4483da2ea35",
     measurementId: "G-QYGLD5Q5RH"
-  };
+};
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -16,7 +16,7 @@ const docRef = db.collection("myApp").doc("loopData");
 let playerIndex = 0;
 const loops = [];
 
-// 🌙 다크모드 토글 로직
+/* 🌙 다크모드 토글 로직 */
 let isDarkMode = false;
 function toggleDarkMode() {
     isDarkMode = !isDarkMode;
@@ -24,14 +24,14 @@ function toggleDarkMode() {
     document.getElementById("themeBtn").innerText = isDarkMode ? "라이트모드 ☀️" : "다크모드 🌙";
 }
 
-// 🟢 정규식 수정됨 (라이브 주소 지원)
+/* 🟢 정규식 수정됨 (라이브 주소 지원 및 백슬래시 오차 수정) */
 function extractVideoId(url) {
     const patterns = [
-        /youtu\\.be\\/([^?&]+)/,
+        /youtu\.be\/([^?&]+)/,
         /v=([^&]+)/,
         /embed\/([^?&]+)/,
         /\/live\/([^?&]+)/,
-		/\/shorts\/([^?&]+)/			
+        /\/shorts\/([^?&]+)/			
     ];
     for (const p of patterns) {
         const match = url.match(p);
@@ -40,14 +40,14 @@ function extractVideoId(url) {
     return null;
 }
 
-// 🟢 저장 시 메모(memo) 필드 추가 및 1MB 용량 사전 체크 (배치 순서 보존)
+/* 🟢 저장 시 메모(memo) 필드 추가 및 1MB 용량 사전 체크 (배치 순서 보존) */
 async function saveLoops() {
     const data = [];
     
-    // 화면에 배치된 DOM 순서대로 데이터를 모아서 저장 (복제 시 위치 유지)
+    /* 화면에 배치된 DOM 순서대로 데이터를 모아서 저장 (복제 시 위치 유지) */
     const videoNodes = document.getElementById("videos").children;
     for (let i = 0; i < videoNodes.length; i++) {
-        const idx = videoNodes[i].id.split('-')[1]; // wrapper-1 에서 '1' 추출
+        const idx = videoNodes[i].id.split('-')[1]; /* wrapper-1 에서 '1' 추출 */
         const loop = loops[idx];
         if (!loop) continue;
         
@@ -65,7 +65,7 @@ async function saveLoops() {
     const maxBytes = 1024 * 1024; 
 
     if (byteLength > maxBytes) {
-        alert(`⚠️ 저장 용량(1MB)을 초과했습니다! 현재 크기: ${(byteLength / 1024).toFixed(1)}KB\\n메모를 줄이거나 오래된 영상을 삭제한 후 다시 시도해 주세요. 데이터가 저장되지 않았습니다.`);
+        alert(`⚠️ 저장 용량(1MB)을 초과했습니다! 현재 크기: ${(byteLength / 1024).toFixed(1)}KB\n메모를 줄이거나 오래된 영상을 삭제한 후 다시 시도해 주세요. 데이터가 저장되지 않았습니다.`);
         return; 
     }
 
@@ -76,7 +76,7 @@ async function saveLoops() {
     }
 }
 
-// 🟢 [변경] 불러올 때 자동재생을 막기 위해 맨 뒤에 false를 전달합니다.
+/* 🟢 불러올 때 자동재생을 막기 위해 맨 뒤에 false를 전달합니다. */
 async function loadLoops() {
     try {
         const docSnap = await docRef.get();
@@ -91,7 +91,7 @@ async function loadLoops() {
                 item.title,
                 item.memo,
                 null,
-                false // ❌ 웹사이트 최초 진입 시 자동 재생 방지
+                false /* ❌ 웹사이트 최초 진입 시 자동 재생 방지 */
             );
         }
     } catch (error) {
@@ -99,7 +99,7 @@ async function loadLoops() {
     }
 }
 
-// 🟢 [변경] 사용자가 직접 생성할 때는 즉시 편리하게 볼 수 있도록 맨 뒤에 true를 전달합니다.
+/* 🟢 사용자가 직접 생성할 때는 즉시 편리하게 볼 수 있도록 맨 뒤에 true를 전달합니다. */
 async function createLoop() {
     const url = document.getElementById("url").value.trim();
     const start = Number(document.getElementById("start").value);
@@ -116,7 +116,7 @@ async function createLoop() {
         return;
     }
 
-    await createLoopFromData(videoId, start, end, null, "", null, true); // ⭕ 즉시 재생 켜기
+    await createLoopFromData(videoId, start, end, null, "", null, true); /* ⭕ 즉시 재생 켜기 */
     saveLoops();
 
     document.getElementById("url").value = "";
@@ -124,7 +124,7 @@ async function createLoop() {
     document.getElementById("end").value = "";
 }
 
-// 🟢 [변경] 매개변수 맨 끝에 shouldAutoplay = false (기본값)를 추가했습니다.
+/* 🟢 매개변수 맨 끝에 shouldAutoplay = false (기본값)를 추가했습니다. */
 async function createLoopFromData(videoId, start, end, savedTitle = null, memo = "", insertAfterNode = null, shouldAutoplay = false) {
     let title = savedTitle || videoId;
 
@@ -178,34 +178,33 @@ async function createLoopFromData(videoId, start, end, savedTitle = null, memo =
         interval: null
     };
 
-    createPlayer(idx, videoId, shouldAutoplay); // 🟢 판단 유무를 플레이어 생성기로 전달
+    createPlayer(idx, videoId, shouldAutoplay); /* 🟢 판단 유무를 플레이어 생성기로 전달 */
 }
 
-// 🟢 [변경] 자동재생 제어 및 완벽한 무한 루프 렉 방지 로직 결합
+/* 🟢 자동재생 제어 및 완벽한 무한 루프 렉 방지 로직 결합 */
 function createPlayer(idx, videoId, shouldAutoplay = false) {
     const loop = loops[idx];
-    let lastSeekTime = 0; // ⏱️ 구간 반복 팅김(10초 렉) 방지용 타임스탬프
+    let lastSeekTime = 0; /* ⏱️ 구간 반복 팅김(10초 렉) 방지용 타임스탬프 */
 
     loop.player = new YT.Player(`player-${idx}`, {
         videoId: videoId,
         playerVars: {
-            autoplay: shouldAutoplay ? 1 : 0, // 👈 진입 시 0(정지), 수동 생성/복제 시 1(재생)
+            autoplay: shouldAutoplay ? 1 : 0, /* 👈 진입 시 0(정지), 수동 생성/복제 시 1(재생) */
             start: loop.start
         },
         events: {
             onReady(event) {
                 if (shouldAutoplay) {
-                    event.target.playVideo(); // 👈 사용자가 방금 요청한 것만 재생 명령 실행
+                    event.target.playVideo(); /* 👈 사용자가 방금 요청한 것만 재생 명령 실행 */
                 }
                 
                 loop.interval = setInterval(() => {
                     try {
-                        // 사용자가 수동으로 재생 버튼을 눌러서 '재생 중(1)' 상태가 되었을 때만 감시 작동
                         if (event.target.getPlayerState() === 1) { 
                             const current = event.target.getCurrentTime();
                             const now = Date.now();
                             
-                            // ⏱️ 0.8초 쿨다운 시스템: 순간적인 뒤로가기 무한 연타 렉 원천 차단
+                            /* ⏱️ 0.8초 쿨다운 시스템: 순간적인 뒤로가기 무한 연타 렉 원천 차단 */
                             if (now - lastSeekTime < 800) return; 
 
                             if (current >= loop.end || current < loop.start - 0.5) {
@@ -220,7 +219,7 @@ function createPlayer(idx, videoId, shouldAutoplay = false) {
     });
 }
 
-// 🟢 새로운 기능: 시간 수정
+/* 🟢 새로운 기능: 시간 수정 */
 function editLoop(idx) {
     const loop = loops[idx];
     if (!loop) return;
@@ -251,7 +250,7 @@ function editLoop(idx) {
     saveLoops();
 }
 
-// 🟢 새로운 기능: 메모 내용 저장 (입력칸을 벗어날 때 실행됨)
+/* 🟢 새로운 기능: 메모 내용 저장 (입력칸을 벗어날 때 실행됨) */
 function updateMemo(idx) {
     const loop = loops[idx];
     if (!loop) return;
@@ -262,7 +261,7 @@ function updateMemo(idx) {
     saveLoops();
 }
 
-// 🟢 [변경] 복제할 때도 즉시 확인하기 편하도록 true를 넘겨 바로 재생되도록 합니다.
+/* 🟢 복제할 때도 즉시 확인하기 편하도록 true를 넘겨 바로 재생되도록 합니다. */
 async function duplicateLoop(idx) {
     const loop = loops[idx];
     if (!loop) return;
@@ -276,7 +275,7 @@ async function duplicateLoop(idx) {
         loop.title,
         loop.memo, 
         currentNode,
-        true // ⭕ 복제된 항목은 즉시 재생 시작
+        true /* ⭕ 복제된 항목은 즉시 재생 시작 */
     );
 
     saveLoops();
