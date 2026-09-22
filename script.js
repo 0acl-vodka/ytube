@@ -186,12 +186,17 @@ function createPlayer(idx, videoId, shouldAutoplay = false) {
     const loop = loops[idx];
     let lastSeekTime = 0; /* ⏱️ 구간 반복 팅김(10초 렉) 방지용 타임스탬프 */
     let lastPlayerVolume = -1; /* 🔊 해당 플레이어의 직전 볼륨 상태 기록용 */
+    let tick = 0; /* 🟢 딜레이 방지를 위한 인터벌 틱 카운터 */
 
     loop.player = new YT.Player(`player-${idx}`, {
         videoId: videoId,
         playerVars: {
-            autoplay: shouldAutoplay ? 1 : 0, /* 👈 진입 시 0(정지), 수동 생성/복제 시 1(재생) */
-            start: loop.start
+            autoplay: shouldAutoplay ? 1 : 0, 
+            start: loop.start,
+            controls: 0,           /* 🟢 1번 문제 해결: 0으로 설정 시 반복 재생 때 툴바 깜빡임이 완벽히 사라집니다. (필요시 1로 변경) */
+            rel: 0,                /* 추천 영상 숨김 */
+            modestbranding: 1,     /* 유튜브 로고 최소화 */
+            iv_load_policy: 3      /* 동영상 특수효과 숨김 */
         },
         events: {
             onReady(event) {
@@ -205,23 +210,29 @@ function createPlayer(idx, videoId, shouldAutoplay = false) {
                 lastPlayerVolume = event.target.getVolume();
 
                 if (shouldAutoplay) {
-                    event.target.playVideo(); /* 👈 사용자가 방금 요청한 것만 재생 명령 실행 */
+                    event.target.playVideo(); 
                 }
                 
+                /* 0.1초마다 실행되는 반복문 */
                 loop.interval = setInterval(() => {
                     try {
-                        /* 🔊 실시간 볼륨 변경 감지 시스템 */
-                        const currentVolume = event.target.getVolume();
-                        if (currentVolume !== lastPlayerVolume) {
-                            lastPlayerVolume = currentVolume;
-                            localStorage.setItem("globalYtVolume", currentVolume);
-                            
-                            /* 🔄 현재 조절한 볼륨을 생성되어 있는 다른 모든 플레이어에게도 전파 */
-                            loops.forEach((l, i) => {
-                                if (l && l.player && typeof l.player.setVolume === "function" && i !== idx) {
-                                    l.player.setVolume(currentVolume);
-                                }
-                            });
+                        tick++;
+
+                        /* 🟢 2번 문제 해결 (통신 과부하 방지): 
+                           볼륨 체크는 0.1초마다가 아닌 0.5초(5틱)마다 실행하여 렉(딜레이) 현상을 대폭 줄입니다. */
+                        if (tick % 5 === 0) {
+                            const currentVolume = event.target.getVolume();
+                            if (currentVolume !== lastPlayerVolume) {
+                                lastPlayerVolume = currentVolume;
+                                localStorage.setItem("globalYtVolume", currentVolume);
+                                
+                                /* 🔄 현재 조절한 볼륨을 생성되어 있는 다른 모든 플레이어에게도 전파 */
+                                loops.forEach((l, i) => {
+                                    if (l && l.player && typeof l.player.setVolume === "function" && i !== idx) {
+                                        l.player.setVolume(currentVolume);
+                                    }
+                                });
+                            }
                         }
 
                         /* 🔄 구간 반복 감시: '재생 중(1)' 상태가 되었을 때만 감시 작동 */
@@ -232,7 +243,9 @@ function createPlayer(idx, videoId, shouldAutoplay = false) {
                             /* ⏱️ 0.8초 쿨다운 시스템: 순간적인 뒤로가기 무한 연타 렉 원천 차단 */
                             if (now - lastSeekTime < 800) return; 
 
-                            if (current >= loop.end || current < loop.start - 0.5) {
+                            /* 🟢 2번 문제 해결 (재생 직후 딜레이 방지):
+                               오차 허용 범위를 -0.5초에서 -1.5초로 늘려, 재생 버튼을 누르자마자 불필요한 탐색(seek)이 발생해 화면이 멈추는 현상을 방지합니다. */
+                            if (current >= loop.end || current < loop.start - 1.5) {
                                 lastSeekTime = now; 
                                 event.target.seekTo(loop.start, true);
                             }
